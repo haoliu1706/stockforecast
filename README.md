@@ -8,6 +8,9 @@ use stock history data to forecast future data
 # pyton -m pip install lxml  (this will be fail,just download the .exe from official site)
 # https://pypi.python.org/pypi/lxml/3.4.2
 
+# html5lib is also needed
+# pyton -m pip install html5lib 
+
 
 
 
