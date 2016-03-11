@@ -19,7 +19,7 @@ def store_stock_history(code='000875'):
     
 def store_zhishu_history(code='000001'):
     stock_path = os.path.join(dataset_path, "szzs.csv")
-    df = ts.get_h_data(code, start='2013-03-11', end='2016-03-10',index=True)
+    df = ts.get_h_data(code, start='2013-03-12', end='2016-03-10',index=True)
     df.to_csv(os.path.join(dataset_path, stock_path))
 
 
