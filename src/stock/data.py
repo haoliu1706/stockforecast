@@ -5,18 +5,23 @@ Created on 2016-3-10
 @author: Administrator
 '''
 import tushare as ts
-import os
-import sys
+from setting import *
 
-class mydata:
-    pass
+def store_index():
+    index_path = os.path.join(dataset_path, "all_stock.csv")
+    allstocks=ts.get_stock_basics()
+    allstocks.to_csv(index_path)
 
-#stocklist="../dataset/all_stocks.csv"
-#stocklist_path = os.path.abspath(os.path.join(sys.argv[0], os.path.pardir,stocklist))
-#
-#allstocks=ts.get_stock_basics()
-#allstocks.to_csv(stocklist_path)
-print ts.get_index()
-szzs = ts.get_h_data('000001', index=True) #上证历史数据
-print szzs
-#cyb = ts.get_h_data('399006', index=True) #创业板历史数据
+def store_stock_history(code='000875'):
+    stock_path = os.path.join(dataset_path, code+".csv")
+    df = ts.get_hist_data(code)
+    df.to_csv(stock_path)
+    
+def store_zhishu_history(code='000001'):
+    stock_path = os.path.join(dataset_path, "szzs.csv")
+    df = ts.get_h_data(code, start='2013-03-11', end='2016-03-10',index=True)
+    df.to_csv(os.path.join(dataset_path, stock_path))
+
+
+store_zhishu_history()
+# print ts.get_index()
