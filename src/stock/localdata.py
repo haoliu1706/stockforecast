@@ -7,6 +7,9 @@ Created on 2016年3月11日
 from setting import *
 import csv
 from datetime import datetime
+import numpy as np
+import network
+import random
 # import tushare as ts
 
 def get_stock_list(value="code"):
@@ -38,10 +41,11 @@ def get_stock_history(code="000875"):
         f_csv = csv.DictReader(f)
         return [i for i in f_csv]
 
-def get_session_feature(lst=[]):
+def get_session_feature(lst,close):
     ''' input: a list of a session
         output:[high/base,low/base,average_turnover]
     '''
+    close = float(close)
     days = len(lst)
     high = 0
     low = 10000
@@ -52,13 +56,36 @@ def get_session_feature(lst=[]):
         if low > float(i['low']):
             low = float(i['low'])
         try:    
-            turnover += float(i['turnover'])
+            turnover += float(i['turnover'])/100
         except:
-            turnover += float(i['volume'])
-    return [high,low,turnover/days]
+            turnover += float(i['volume'])/90000000000
+    return [[high/close],[low/close],[turnover/days]]
 
-def get_latest_feature(lst):
-    return [[float(i['high']),float(i['low']),float(i['turnover'])] for i in lst]
+def get_latest_feature(lst,close):
+    close = float(close)
+    try :
+        return [[float(lst['high'])/close],[float(lst['low'])/close],[float(lst['open'])/close],[float(lst['close'])/close],[float(lst['turnover'])/100]] 
+    except:
+        return [[float(lst['high'])/close],[float(lst['low'])/close],[float(lst['open'])/close],[float(lst['close'])/close],[float(lst['volume'])/90000000000]] 
+def get_type(x):
+#     types = [-5,-4,-3,-2,-1,-0.5,0,0.5,1,2,3,4,5,]
+    types = [-2,0,2,]
+    result = [[0]]*(len(types)+1)
+    for i in xrange(len(types)):
+        if x*100<types[i]:
+            result[i] = [1]
+            return result
+    result[-1] = [1]
+    return result
+        
+def get_result(lst,close):
+    result = []
+#     output = ['high','low','open','close']
+    output = ['high']
+    for i in output:
+        result.extend(get_type((float(lst[i])-float(close))/float(close)))
+#         print (float(lst[i])-float(close))/float(close)
+    return np.array(result)
 
 def divide_stk_his_data(sz_lst,stock_lst):
     '''根据上证交易数据补全个股历史数据, 同时以上证交易日为基准，对股票里的非交易日数据进行剔除
@@ -85,8 +112,63 @@ def divide_stk_his_data(sz_lst,stock_lst):
 def str2time(mystr):
     return datetime.strptime(mystr, "%Y-%m-%d")
 
-new_stockhistory = divide_stk_his_data(get_stock_history('szzs'),get_stock_history())
+def get_features(data,historys,latest_days=15,session_days=10,sessions=23):
+    '''input data should be like [[],[]],the second list is the stock need to forecast
+    '''
+    data_set = []
+    nums = historys-latest_days-session_days*sessions
+    for i in xrange(1,nums):
+        feature = []
+        for l in xrange(15):
+            for dt in data:
+                feature.extend(get_latest_feature(dt[i+l],dt[i+l+1]['close']))
+        for session in xrange(sessions):
+            start = i+latest_days+session*session_days
+            end = i+latest_days+(session+1)*session_days
+            for dt in data:
+                feature.extend(get_session_feature(dt[start:end],dt[i]['close']))
+        result = get_result(data[1][i-1],data[1][i]['close'])
+        data_set.append([np.array(feature),result])
+    return data_set
 
-print len(new_stockhistory)
-print len(get_stock_history('szzs'))
+szzs = get_stock_history('szzs')
+stock = get_stock_history('000875')
+new_stockhistory = divide_stk_his_data(szzs,stock)
+
+data_set = get_features([szzs,new_stockhistory],len(szzs))
+
+numlist = random.sample(xrange(len(data_set)), 300)
+training_data = [data_set[i] for i in numlist]
+testing_data = [data_set[i] for i in xrange(len(data_set)) if i not in numlist]
+for i in training_data:
+    print i 
+    break
+
+net = network.Network([288, 30, 4])
+net.SGD(training_data, 10000, 1, 3.8, test_data=testing_data)
+# for i in  training_data:
+#     print i
+#     print len(i[0])
+#     print len(i[1])
+#     break 
+# count = 0
+# for feature in  get_features([szzs,new_stockhistory],len(szzs)):
+#     print feature
+#     count +=1
+#     if count == 30:
+#         break
+
+
+
+# for (x,y) in zip(new_stockhistory,get_stock_history('szzs')):
+#     print x['date']
+#     print y['date']
+#     break 
+
+
+
+
+
+
+
 
