@@ -42,7 +42,7 @@ class Network(object):
         return a
 
     def SGD(self, training_data, epochs, mini_batch_size, eta,
-            test_data=None):
+            test_data=None,value_data=None):
         """Train the neural network using mini-batch stochastic
         gradient descent.  The ``training_data`` is a list of tuples
         ``(x, y)`` representing the training inputs and the desired
@@ -63,6 +63,7 @@ class Network(object):
             if test_data:
                 print "Epoch {0}: {1} / {2}".format(
                     j, self.evaluate(test_data), n_test)
+                print self.evaluate(value_data)
             else:
                 print "Epoch {0} complete".format(j)
 
@@ -123,14 +124,14 @@ class Network(object):
         network's output is assumed to be the index of whichever
         neuron in the final layer has the highest activation."""
         result = [[self.feedforward(x)[0:4],y[0:4]]for (x,y) in  test_data]
-        print result[2] 
+#         print result[2] 
 #         for i in xrange(4):
-        test_results = [(np.argmax(self.feedforward(x)[0:2]), np.argmax(y[0:2]))
+        test_results = [(np.argmax(self.feedforward(x)), np.argmax(y))
                     for (x, y) in test_data]
             
 #         test_results = [(np.argmax(self.feedforward(x)), y)
 #                         for (x, y) in test_data]
-        print test_results[2]
+#         print test_results[2]
 #         print test_results
         return sum(int(x == y) for (x, y) in test_results)
 

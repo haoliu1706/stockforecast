@@ -12,6 +12,9 @@ import network
 import random
 # import tushare as ts
 
+resulttype = [-5,-4,-3,-2,-1,-0.5,0,0.5,1,2,3,4,5,]
+input_type = [-0.8,-0.6,-0.4,-0.2,0,0.1,0.2,0.4,0.6,0.8,1,2,3]
+
 def get_stock_list(value="code"):
     with open(stocklist_path) as f:
         f_csv = csv.DictReader(f)
@@ -41,11 +44,11 @@ def get_stock_history(code="000875"):
         f_csv = csv.DictReader(f)
         return [i for i in f_csv]
 
-def get_session_feature(lst,close):
+def get_session_feature(lst,base):
     ''' input: a list of a session
         output:[high/base,low/base,average_turnover]
     '''
-    close = float(close)
+    close = float(base['close'])
     days = len(lst)
     high = 0
     low = 10000
@@ -56,23 +59,32 @@ def get_session_feature(lst,close):
         if low > float(i['low']):
             low = float(i['low'])
         try:    
-            turnover += float(i['turnover'])/100
+            turnover += float(i['turnover'])/float(base['turnover'])
         except:
-            turnover += float(i['volume'])/90000000000
-    return [[high/close],[low/close],[turnover/days]]
+            turnover += float(i['volume'])/float(base['volume'])
+    result = []
+    for i in [high,low]:
+        result.append([i/(5*close)])
+    result.append([turnover/days])
+    return result
 
 def get_latest_feature(lst,close):
     close = float(close)
+    keylst = ['high','low','open','close']
+    result = []
+    for i in keylst:
+        result.append([float(lst[i])/(5*close)])
     try :
-        return [[float(lst['high'])/close],[float(lst['low'])/close],[float(lst['open'])/close],[float(lst['close'])/close],[float(lst['turnover'])/100]] 
+        result.append([float(lst['turnover'])/100]) 
     except:
-        return [[float(lst['high'])/close],[float(lst['low'])/close],[float(lst['open'])/close],[float(lst['close'])/close],[float(lst['volume'])/90000000000]] 
-def get_type(x):
+        result.append([float(lst['volume'])/90000000000]) 
+    return result
+
+def get_type(x,types=[4]):
 #     types = [-5,-4,-3,-2,-1,-0.5,0,0.5,1,2,3,4,5,]
-    types = [-2,0,2,]
     result = [[0]]*(len(types)+1)
     for i in xrange(len(types)):
-        if x*100<types[i]:
+        if x*100<=types[i]:
             result[i] = [1]
             return result
     result[-1] = [1]
@@ -81,7 +93,7 @@ def get_type(x):
 def get_result(lst,close):
     result = []
 #     output = ['high','low','open','close']
-    output = ['high']
+    output = ['close']
     for i in output:
         result.extend(get_type((float(lst[i])-float(close))/float(close)))
 #         print (float(lst[i])-float(close))/float(close)
@@ -112,12 +124,17 @@ def divide_stk_his_data(sz_lst,stock_lst):
 def str2time(mystr):
     return datetime.strptime(mystr, "%Y-%m-%d")
 
-def get_features(data,historys,latest_days=15,session_days=10,sessions=23):
+def get_features(data,historys=0,latest_days=15,session_days=10,sessions=23):
     '''input data should be like [[],[]],the second list is the stock need to forecast
     '''
     data_set = []
-    nums = historys-latest_days-session_days*sessions
-    for i in xrange(1,nums):
+    if historys:
+        start = 2
+        nums = historys-latest_days-session_days*sessions
+    else:
+        start = 0
+        nums = 2
+    for i in xrange(start,nums):
         feature = []
         for l in xrange(15):
             for dt in data:
@@ -126,47 +143,36 @@ def get_features(data,historys,latest_days=15,session_days=10,sessions=23):
             start = i+latest_days+session*session_days
             end = i+latest_days+(session+1)*session_days
             for dt in data:
-                feature.extend(get_session_feature(dt[start:end],dt[i]['close']))
+                feature.extend(get_session_feature(dt[start:end],dt[i]))
         result = get_result(data[1][i-1],data[1][i]['close'])
         data_set.append([np.array(feature),result])
+    if nums==2:
+        print 
+        print result
     return data_set
 
-szzs = get_stock_history('szzs')
-stock = get_stock_history('000875')
-new_stockhistory = divide_stk_his_data(szzs,stock)
 
-data_set = get_features([szzs,new_stockhistory],len(szzs))
+if __name__ == '__main__':
+    szzs = get_stock_history('szzs')
+    stock = get_stock_history('000875')
+    new_stockhistory = divide_stk_his_data(szzs,stock)
+    
+    data_set = get_features([szzs,new_stockhistory],historys = len(szzs))
+    value_set = get_features([szzs,new_stockhistory])
+    
+    numlist = random.sample(xrange(len(data_set)), 300)
+    training_data = [data_set[i] for i in numlist]
+    testing_data = [data_set[i] for i in xrange(len(data_set)) if i not in numlist]
+    for i in value_set:
+        for j in i:
+            print j 
+            print len(j)
+    #          
+    #     break
+    net = network.Network([288, 30, 2])
+    net.SGD(training_data, 10000, 2, 2.9, test_data=testing_data,value_data=value_set)
 
-numlist = random.sample(xrange(len(data_set)), 300)
-training_data = [data_set[i] for i in numlist]
-testing_data = [data_set[i] for i in xrange(len(data_set)) if i not in numlist]
-for i in training_data:
-    print i 
-    break
-
-net = network.Network([288, 30, 4])
-net.SGD(training_data, 10000, 1, 3.8, test_data=testing_data)
-# for i in  training_data:
-#     print i
-#     print len(i[0])
-#     print len(i[1])
-#     break 
-# count = 0
-# for feature in  get_features([szzs,new_stockhistory],len(szzs)):
-#     print feature
-#     count +=1
-#     if count == 30:
-#         break
-
-
-
-# for (x,y) in zip(new_stockhistory,get_stock_history('szzs')):
-#     print x['date']
-#     print y['date']
-#     break 
-
-
-
+#     
 
 
 
