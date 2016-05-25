@@ -36,9 +36,8 @@ def thread_store_all_stock():
     t.join()
 
 if __name__ == '__main__':
-    thread_store_all_stock()
-
-         
-# store_zhishu_history()
+    store_index()
+    thread_store_all_stock()         
+    store_zhishu_history()
 # store_stock_history()
 # print ts.get_index()
