@@ -167,8 +167,6 @@ if __name__ == '__main__':
         for j in i:
             print j 
             print len(j)
-    #          
-    #     break
     net = network.Network([288, 30, 2])
     net.SGD(training_data, 10000, 2, 2.9, test_data=testing_data,value_data=value_set)
 
